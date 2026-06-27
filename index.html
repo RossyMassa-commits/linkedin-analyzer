@@ -17,8 +17,6 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;border:none}
 .btn.primary{background:#fff;color:#000}
 .btn.primary:hover{background:#eee}
-.btn.secondary{background:transparent;border:1px solid #333;color:#fff}
-.btn.secondary:hover{background:#1a1a1a}
 .btn-row{display:flex;gap:8px;margin-top:1.25rem}
 .tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid #222;padding-bottom:0}
 .tab{font-size:13px;padding:8px 16px;border:none;background:none;cursor:pointer;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;font-weight:500}
@@ -46,38 +44,30 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
 .copy-btn{font-size:11px;padding:3px 10px;margin-left:auto;background:transparent;border:1px solid #333;border-radius:6px;color:#888;cursor:pointer;font-family:inherit}
 .copy-btn:hover{color:#fff;border-color:#555}
 .ideas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.idea{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;font-size:13px;color:#aaa;line-height:1.5;cursor:pointer}
-.idea:hover{border-color:#444;color:#fff}
-.idea .go{font-size:11px;color:#555;margin-top:6px}
+.idea{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;font-size:13px;color:#aaa;line-height:1.5}
+.cal-item{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13px;color:#aaa;line-height:1.5}
+.cal-day{font-size:11px;color:#555;margin-bottom:4px}
+.hook-item{background:#111;border-left:3px solid #4ade80;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#ddd;line-height:1.6;border-radius:0 8px 8px 0}
 .loading{display:none;align-items:center;gap:10px;font-size:14px;color:#666;padding:2rem 0}
 .loading.show{display:flex}
 .dot{width:6px;height:6px;border-radius:50%;background:#444;animation:pulse 1.4s infinite}
 .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
 @keyframes pulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
-.api-banner{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;margin-bottom:1.5rem;font-size:13px;color:#aaa;line-height:1.6}
-.api-banner a{color:#888;text-decoration:underline}
-.key-row{display:flex;gap:8px;margin-top:10px}
-.key-row input{flex:1;background:#111;border:1px solid #333;border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;font-family:monospace}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.compare-box{background:#111;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;color:#ddd}
+.compare-label{font-size:11px;color:#555;margin-bottom:6px;font-weight:600;text-transform:uppercase}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>LinkedIn brand analyzer</h1>
-  <p class="sub">Paste your profile and get AI-powered scores, rewrites, and content ideas.</p>
-
-  <div class="api-banner">
-    🔑 You need an Anthropic API key to use this tool. <a href="https://console.anthropic.com/settings/keys" target="_blank">Get one free here</a> — then paste it below.
-    <div class="key-row">
-      <input type="password" id="api-key" placeholder="sk-ant-api03-..." />
-      <button class="btn secondary" onclick="saveKey()">Save key</button>
-    </div>
-    <div id="key-status" style="font-size:12px;margin-top:6px;color:#4ade80;display:none">✓ Key saved!</div>
-  </div>
+  <p class="sub">Paste your profile and get AI-powered scores, rewrites, content calendar, and viral hooks.</p>
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('input')">Your profile</button>
     <button class="tab" onclick="switchTab('result')" id="tab-result" style="display:none">Analysis</button>
-    <button class="tab" onclick="switchTab('ideas')" id="tab-ideas" style="display:none">Content ideas</button>
+    <button class="tab" onclick="switchTab('calendar')" id="tab-cal" style="display:none">30-day calendar</button>
+    <button class="tab" onclick="switchTab('hooks')" id="tab-hooks" style="display:none">Viral hooks</button>
   </div>
 
   <div class="section active" id="sec-input">
@@ -91,7 +81,7 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
     </div>
     <div class="field">
       <label>A recent post (optional)</label>
-      <textarea id="inp-post" rows="4" placeholder="Paste a recent LinkedIn post to get feedback on your writing style..."></textarea>
+      <textarea id="inp-post" rows="4" placeholder="Paste a recent LinkedIn post..."></textarea>
     </div>
     <div class="field">
       <label>Your industry / niche</label>
@@ -103,32 +93,24 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
   </div>
 
   <div class="section" id="sec-result">
-    <div class="loading" id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Claude is reading your profile...</span></div>
+    <div class="loading" id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Claude is analyzing your profile...</span></div>
     <div id="result-content"></div>
   </div>
 
-  <div class="section" id="sec-ideas">
-    <div id="ideas-content"></div>
+  <div class="section" id="sec-calendar">
+    <div id="cal-content"></div>
+  </div>
+
+  <div class="section" id="sec-hooks">
+    <div id="hooks-content"></div>
   </div>
 </div>
 
 <script>
-function saveKey(){
-  const k = document.getElementById('api-key').value.trim();
-  if(!k){alert('Please paste your API key first');return;}
-  localStorage.setItem('anthropic_key', k);
-  document.getElementById('key-status').style.display='block';
-  setTimeout(()=>document.getElementById('key-status').style.display='none', 2000);
-}
-
-function getKey(){
-  return localStorage.getItem('anthropic_key') || document.getElementById('api-key').value.trim();
-}
-
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  const tabs=['input','result','ideas'];
+  const tabs=['input','result','calendar','hooks'];
   document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
   document.getElementById('sec-'+name).classList.add('active');
 }
@@ -137,9 +119,19 @@ function scoreColor(n){return n>=8?'#4ade80':n>=5?'#fb923c':'#f87171'}
 function scoreBadge(n){return n>=8?'good':n>=5?'ok':'bad'}
 function scoreLabel(n){return n>=8?'strong':n>=5?'needs work':'weak'}
 
+async function callClaude(prompt){
+  const res = await fetch('/api/analyze',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+  });
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message);
+  let text = data.content.map(c=>c.text||'').join('');
+  return text.replace(/```json|```/g,'').trim();
+}
+
 async function analyze(){
-  const key = getKey();
-  if(!key){alert('Please paste your API key at the top first!');return;}
   const title = document.getElementById('inp-title').value.trim();
   const about = document.getElementById('inp-about').value.trim();
   const post = document.getElementById('inp-post').value.trim();
@@ -147,7 +139,8 @@ async function analyze(){
   if(!title && !about){alert('Please paste at least your headline or about section.');return;}
 
   document.getElementById('tab-result').style.display='';
-  document.getElementById('tab-ideas').style.display='';
+  document.getElementById('tab-cal').style.display='';
+  document.getElementById('tab-hooks').style.display='';
   switchTab('result');
 
   const loading = document.getElementById('loading');
@@ -155,34 +148,37 @@ async function analyze(){
   loading.classList.add('show');
   content.innerHTML='';
 
-  const prompt = `You are a LinkedIn brand expert. Analyze this profile and return ONLY a JSON object, no markdown, no explanation.
+  try{
+    const text = await callClaude(`You are a LinkedIn brand expert. Analyze this profile and return ONLY a JSON object, no markdown.
 
-Title/Headline: ${title||'Not provided'}
+Title: ${title||'Not provided'}
 About: ${about||'Not provided'}
-Recent post: ${post||'Not provided'}
+Post: ${post||'Not provided'}
 Industry: ${niche||'Not specified'}
 
-Return exactly this JSON:
-{"overall":<1-10>,"overall_summary":"<2 sentence summary>","scores":{"headline":<1-10>,"about":<1-10>,"clarity":<1-10>,"uniqueness":<1-10>,"cta":<1-10>},"headline_rewrite":"<improved headline>","headline_why":"<one sentence why>","about_rewrite":"<improved about, max 120 words>","about_why":"<one sentence why>","post_feedback":"<2-3 sentence feedback or suggestion>","quick_wins":["<win1>","<win2>","<win3>"],"content_ideas":["<idea1>","<idea2>","<idea3>","<idea4>","<idea5>","<idea6>"]}`;
+Return exactly:
+{"overall":<1-10>,"overall_summary":"<2 sentences>","scores":{"headline":<1-10>,"about":<1-10>,"clarity":<1-10>,"uniqueness":<1-10>,"cta":<1-10>},"headline_original":"${(title||'').replace(/"/g,"'")}","headline_rewrite":"<improved>","headline_why":"<one sentence>","about_original":"${(about||'').substring(0,200).replace(/"/g,"'")}","about_rewrite":"<improved max 120 words>","about_why":"<one sentence>","post_feedback":"<2-3 sentences>","quick_wins":["<win1>","<win2>","<win3>"]}`);
 
-  try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1500,messages:[{role:'user',content:prompt}]})
-    });
-    const data = await res.json();
-    if(data.error){throw new Error(data.error.message)}
-    let text = data.content.map(c=>c.text||'').join('');
-    text = text.replace(/```json|```/g,'').trim();
     const j = JSON.parse(text);
+
+    const calText = await callClaude(`You are a LinkedIn content strategist. Create a 30-day content calendar for someone in this niche: ${niche||'business'}.
+Return ONLY a JSON array of 30 objects like: [{"day":1,"topic":"<topic>","format":"<Story|Tip|Opinion|Case study|List>","hook":"<opening line>"}]`);
+
+    const calData = JSON.parse(calText);
+
+    const hooksText = await callClaude(`Generate 5 viral LinkedIn post hooks for someone in this niche: ${niche||'business'}.
+Return ONLY a JSON array: ["<hook1>","<hook2>","<hook3>","<hook4>","<hook5>"]`);
+
+    const hooksData = JSON.parse(hooksText);
+
     loading.classList.remove('show');
     renderResult(j);
-    renderIdeas(j.content_ideas, niche);
-    content.style.display='block';
+    renderCalendar(calData);
+    renderHooks(hooksData);
+
   }catch(e){
     loading.classList.remove('show');
-    content.innerHTML='<p style="color:#f87171;font-size:14px;padding:1rem 0">Error: '+e.message+'<br><br>Make sure your API key is correct and you have credits.</p>';
+    content.innerHTML='<p style="color:#f87171;font-size:14px;padding:1rem 0">Error: '+e.message+'</p>';
   }
 }
 
@@ -195,57 +191,46 @@ function renderResult(j){
     </div>
     <div class="scores">
       ${[['Headline',sc.headline],['About',sc.about],['Clarity',sc.clarity],['Uniqueness',sc.uniqueness],['CTA',sc.cta]].map(([k,v])=>`
-        <div class="score-box">
-          <div class="lbl">${k}</div>
-          <div class="num" style="color:${scoreColor(v)}">${v}/10</div>
-          <div class="bar"><div class="fill" style="width:${v*10}%;background:${scoreColor(v)}"></div></div>
-        </div>`).join('')}
+        <div class="score-box"><div class="lbl">${k}</div><div class="num" style="color:${scoreColor(v)}">${v}/10</div>
+        <div class="bar"><div class="fill" style="width:${v*10}%;background:${scoreColor(v)}"></div></div></div>`).join('')}
     </div>
     <div class="card">
       <h3>Headline <span class="badge ${scoreBadge(sc.headline)}">${scoreLabel(sc.headline)}</span><button class="copy-btn" onclick="copyIt(this,'${esc(j.headline_rewrite)}')">copy</button></h3>
       <div class="bullet">${j.headline_why}</div>
-      <div class="rewrite">${j.headline_rewrite}</div>
+      <div class="compare">
+        <div class="compare-box"><div class="compare-label">Before</div>${j.headline_original||'—'}</div>
+        <div class="compare-box" style="border-left:3px solid #4ade80"><div class="compare-label" style="color:#4ade80">After</div>${j.headline_rewrite}</div>
+      </div>
     </div>
     <div class="card">
       <h3>About section <span class="badge ${scoreBadge(sc.about)}">${scoreLabel(sc.about)}</span><button class="copy-btn" onclick="copyIt(this,'${esc(j.about_rewrite)}')">copy</button></h3>
       <div class="bullet">${j.about_why}</div>
-      <div class="rewrite">${j.about_rewrite}</div>
+      <div class="compare">
+        <div class="compare-box"><div class="compare-label">Before</div>${j.about_original||'—'}</div>
+        <div class="compare-box" style="border-left:3px solid #4ade80"><div class="compare-label" style="color:#4ade80">After</div>${j.about_rewrite}</div>
+      </div>
     </div>
-    <div class="card">
-      <h3>Post feedback</h3>
-      <div class="bullet">${j.post_feedback}</div>
-    </div>
-    <div class="card">
-      <h3>Quick wins</h3>
-      ${j.quick_wins.map(w=>`<div class="bullet">${w}</div>`).join('')}
-    </div>`;
+    <div class="card"><h3>Post feedback</h3><div class="bullet">${j.post_feedback}</div></div>
+    <div class="card"><h3>Quick wins</h3>${j.quick_wins.map(w=>`<div class="bullet">${w}</div>`).join('')}</div>`;
 }
 
-function renderIdeas(ideas, niche){
-  document.getElementById('ideas-content').innerHTML=`
-    <p style="font-size:14px;color:#666;margin-bottom:1rem">Post ideas for your niche${niche?' ('+niche+')':''}. Click any to open it in Claude.</p>
-    <div class="ideas">
-      ${ideas.map(idea=>`<div class="idea" onclick="openIdea('${esc(idea)}')">${idea}<div class="go">click to write this post →</div></div>`).join('')}
-    </div>`;
+function renderCalendar(data){
+  document.getElementById('cal-content').innerHTML=`
+    <p style="font-size:14px;color:#666;margin-bottom:1rem">Your 30-day LinkedIn content plan.</p>
+    ${data.map(d=>`<div class="cal-item"><div class="cal-day">Day ${d.day} · ${d.format}</div><strong style="color:#fff">${d.topic}</strong><div style="margin-top:4px;color:#666">${d.hook}</div></div>`).join('')}`;
+}
+
+function renderHooks(data){
+  document.getElementById('hooks-content').innerHTML=`
+    <p style="font-size:14px;color:#666;margin-bottom:1rem">5 viral openers you can use right now.</p>
+    ${data.map((h,i)=>`<div class="hook-item"><span style="color:#4ade80;font-size:11px;font-weight:600">HOOK ${i+1}</span><br>${h}<button class="copy-btn" style="margin-top:8px;display:block" onclick="copyIt(this,'${esc(h)}')">copy</button></div>`).join('')}`;
 }
 
 function esc(s){return(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
 
-function copyIt(btn, text){
-  navigator.clipboard.writeText(text).then(()=>{
-    btn.textContent='copied!';
-    setTimeout(()=>btn.textContent='copy',2000);
-  });
+function copyIt(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{btn.textContent='copied!';setTimeout(()=>btn.textContent='copy',2000)});
 }
-
-function openIdea(idea){
-  window.open('https://claude.ai/new?q=Write+a+LinkedIn+post+about:+'+encodeURIComponent(idea),'_blank');
-}
-
-window.addEventListener('load',()=>{
-  const saved=localStorage.getItem('anthropic_key');
-  if(saved) document.getElementById('api-key').value=saved;
-});
 </script>
 </body>
 </html>
