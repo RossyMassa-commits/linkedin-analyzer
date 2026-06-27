@@ -14,6 +14,7 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
 .field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:#aaa}
 .field input,.field textarea{width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6}
 .field input:focus,.field textarea:focus{outline:none;border-color:#444}
+.hint{font-size:12px;color:#555;margin-top:4px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;border:none}
 .btn.primary{background:#fff;color:#000}
 .btn.primary:hover{background:#eee}
@@ -44,7 +45,6 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
 .copy-btn{font-size:11px;padding:3px 10px;margin-left:auto;background:transparent;border:1px solid #333;border-radius:6px;color:#888;cursor:pointer;font-family:inherit}
 .copy-btn:hover{color:#fff;border-color:#555}
 .ideas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.idea{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;font-size:13px;color:#aaa;line-height:1.5}
 .cal-item{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13px;color:#aaa;line-height:1.5}
 .cal-day{font-size:11px;color:#555;margin-bottom:4px}
 .hook-item{background:#111;border-left:3px solid #4ade80;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#ddd;line-height:1.6;border-radius:0 8px 8px 0}
@@ -56,12 +56,13 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
 .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
 .compare-box{background:#111;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;color:#ddd}
 .compare-label{font-size:11px;color:#555;margin-bottom:6px;font-weight:600;text-transform:uppercase}
+.niche-detected{font-size:12px;color:#4ade80;margin-top:6px;display:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>LinkedIn brand analyzer</h1>
-  <p class="sub">Paste your profile and get AI-powered scores, rewrites, content calendar, and viral hooks.</p>
+  <p class="sub">Paste your profile and get AI-powered scores, rewrites, a 30-day content calendar, and viral hooks.</p>
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('input')">Your profile</button>
@@ -84,8 +85,9 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
       <textarea id="inp-post" rows="4" placeholder="Paste a recent LinkedIn post..."></textarea>
     </div>
     <div class="field">
-      <label>Your industry / niche</label>
+      <label>Your industry / niche <span style="color:#555">(optional — we'll detect it if empty)</span></label>
       <input type="text" id="inp-niche" placeholder="e.g. SaaS founder, marketing consultant, UX designer..." />
+      <div class="niche-detected" id="niche-detected"></div>
     </div>
     <div class="btn-row">
       <button class="btn primary" onclick="analyze()">✦ Analyze my profile</button>
@@ -93,7 +95,7 @@ h1{font-size:26px;font-weight:600;margin-bottom:6px}
   </div>
 
   <div class="section" id="sec-result">
-    <div class="loading" id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Claude is analyzing your profile...</span></div>
+    <div class="loading" id="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span id="loading-text">Claude is analyzing your profile...</span></div>
     <div id="result-content"></div>
   </div>
 
@@ -119,6 +121,10 @@ function scoreColor(n){return n>=8?'#4ade80':n>=5?'#fb923c':'#f87171'}
 function scoreBadge(n){return n>=8?'good':n>=5?'ok':'bad'}
 function scoreLabel(n){return n>=8?'strong':n>=5?'needs work':'weak'}
 
+function setLoading(msg){
+  document.getElementById('loading-text').textContent = msg;
+}
+
 async function callClaude(prompt){
   const res = await fetch('/api/analyze',{
     method:'POST',
@@ -131,11 +137,22 @@ async function callClaude(prompt){
   return text.replace(/```json|```/g,'').trim();
 }
 
+async function detectNiche(title, about){
+  const text = await callClaude(`Based on this LinkedIn profile, identify the person's professional niche in 3-6 words. Return ONLY the niche, nothing else.
+
+Headline: ${title}
+About: ${about}
+
+Examples of good niche descriptions: "B2B SaaS founder", "freelance UX designer", "digital marketing consultant", "real estate investor", "personal finance coach"`);
+  return text.trim();
+}
+
 async function analyze(){
   const title = document.getElementById('inp-title').value.trim();
   const about = document.getElementById('inp-about').value.trim();
   const post = document.getElementById('inp-post').value.trim();
-  const niche = document.getElementById('inp-niche').value.trim();
+  let niche = document.getElementById('inp-niche').value.trim();
+
   if(!title && !about){alert('Please paste at least your headline or about section.');return;}
 
   document.getElementById('tab-result').style.display='';
@@ -149,32 +166,54 @@ async function analyze(){
   content.innerHTML='';
 
   try{
+    // Step 1: detect niche if empty
+    if(!niche){
+      setLoading('Detecting your niche from your profile...');
+      niche = await detectNiche(title, about);
+      document.getElementById('inp-niche').value = niche;
+      const nicheEl = document.getElementById('niche-detected');
+      nicheEl.textContent = '✓ Detected niche: ' + niche;
+      nicheEl.style.display = 'block';
+    }
+
+    // Step 2: analyze profile
+    setLoading('Scoring your profile...');
     const text = await callClaude(`You are a LinkedIn brand expert. Analyze this profile and return ONLY a JSON object, no markdown.
 
 Title: ${title||'Not provided'}
 About: ${about||'Not provided'}
 Post: ${post||'Not provided'}
-Industry: ${niche||'Not specified'}
+Niche: ${niche}
 
 Return exactly:
-{"overall":<1-10>,"overall_summary":"<2 sentences>","scores":{"headline":<1-10>,"about":<1-10>,"clarity":<1-10>,"uniqueness":<1-10>,"cta":<1-10>},"headline_original":"${(title||'').replace(/"/g,"'")}","headline_rewrite":"<improved>","headline_why":"<one sentence>","about_original":"${(about||'').substring(0,200).replace(/"/g,"'")}","about_rewrite":"<improved max 120 words>","about_why":"<one sentence>","post_feedback":"<2-3 sentences>","quick_wins":["<win1>","<win2>","<win3>"]}`);
+{"overall":<1-10>,"overall_summary":"<2 sentences>","scores":{"headline":<1-10>,"about":<1-10>,"clarity":<1-10>,"uniqueness":<1-10>,"cta":<1-10>},"headline_original":"${(title||'').replace(/"/g,"'")}","headline_rewrite":"<improved headline specific to ${niche} niche>","headline_why":"<one sentence>","about_original":"${(about||'').substring(0,200).replace(/"/g,"'")}","about_rewrite":"<improved about section for someone in ${niche}, max 120 words>","about_why":"<one sentence>","post_feedback":"<2-3 sentences>","quick_wins":["<win1 specific to ${niche}>","<win2>","<win3>"]}`);
 
     const j = JSON.parse(text);
 
-    const calText = await callClaude(`You are a LinkedIn content strategist. Create a 30-day content calendar for someone in this niche: ${niche||'business'}.
-Return ONLY a JSON array of 30 objects like: [{"day":1,"topic":"<topic>","format":"<Story|Tip|Opinion|Case study|List>","hook":"<opening line>"}]`);
+    // Step 3: generate calendar
+    setLoading('Building your 30-day content calendar...');
+    const calText = await callClaude(`You are a LinkedIn content strategist specializing in the ${niche} niche.
+
+Create a 30-day LinkedIn content calendar SPECIFICALLY for someone who is a ${niche}. Every topic must be directly relevant to the ${niche} audience and their specific pain points, wins, and interests.
+
+Return ONLY a JSON array of 30 objects:
+[{"day":1,"topic":"<specific topic for ${niche}>","format":"<Story|Tip|Opinion|Case study|List>","hook":"<compelling opening line for this specific topic>"}]`);
 
     const calData = JSON.parse(calText);
 
-    const hooksText = await callClaude(`Generate 5 viral LinkedIn post hooks for someone in this niche: ${niche||'business'}.
-Return ONLY a JSON array: ["<hook1>","<hook2>","<hook3>","<hook4>","<hook5>"]`);
+    // Step 4: generate hooks
+    setLoading('Generating viral hooks...');
+    const hooksText = await callClaude(`Generate 5 viral LinkedIn post opening hooks for a ${niche}. Each hook must speak directly to the ${niche} audience — their fears, goals, or curiosities.
+
+Return ONLY a JSON array:
+["<hook1>","<hook2>","<hook3>","<hook4>","<hook5>"]`);
 
     const hooksData = JSON.parse(hooksText);
 
     loading.classList.remove('show');
-    renderResult(j);
-    renderCalendar(calData);
-    renderHooks(hooksData);
+    renderResult(j, niche);
+    renderCalendar(calData, niche);
+    renderHooks(hooksData, niche);
 
   }catch(e){
     loading.classList.remove('show');
@@ -182,9 +221,10 @@ Return ONLY a JSON array: ["<hook1>","<hook2>","<hook3>","<hook4>","<hook5>"]`);
   }
 }
 
-function renderResult(j){
+function renderResult(j, niche){
   const sc=j.scores;
   document.getElementById('result-content').innerHTML=`
+    <div style="font-size:12px;color:#4ade80;margin-bottom:1rem">✓ Analyzed for niche: <strong>${niche}</strong></div>
     <div class="overall-box">
       <div><div class="big-score">${j.overall}<span style="font-size:20px;color:#444">/10</span></div><div class="big-lbl">overall score</div></div>
       <div class="summary">${j.overall_summary}</div>
@@ -214,15 +254,15 @@ function renderResult(j){
     <div class="card"><h3>Quick wins</h3>${j.quick_wins.map(w=>`<div class="bullet">${w}</div>`).join('')}</div>`;
 }
 
-function renderCalendar(data){
+function renderCalendar(data, niche){
   document.getElementById('cal-content').innerHTML=`
-    <p style="font-size:14px;color:#666;margin-bottom:1rem">Your 30-day LinkedIn content plan.</p>
+    <p style="font-size:14px;color:#666;margin-bottom:1rem">30-day content plan tailored for <strong style="color:#4ade80">${niche}</strong>.</p>
     ${data.map(d=>`<div class="cal-item"><div class="cal-day">Day ${d.day} · ${d.format}</div><strong style="color:#fff">${d.topic}</strong><div style="margin-top:4px;color:#666">${d.hook}</div></div>`).join('')}`;
 }
 
-function renderHooks(data){
+function renderHooks(data, niche){
   document.getElementById('hooks-content').innerHTML=`
-    <p style="font-size:14px;color:#666;margin-bottom:1rem">5 viral openers you can use right now.</p>
+    <p style="font-size:14px;color:#666;margin-bottom:1rem">5 viral openers for <strong style="color:#4ade80">${niche}</strong> content.</p>
     ${data.map((h,i)=>`<div class="hook-item"><span style="color:#4ade80;font-size:11px;font-weight:600">HOOK ${i+1}</span><br>${h}<button class="copy-btn" style="margin-top:8px;display:block" onclick="copyIt(this,'${esc(h)}')">copy</button></div>`).join('')}`;
 }
 
